@@ -1,0 +1,8 @@
+Makefile
+moc_*.cpp
+qrc_*.cpp
+*.o
+*.h.swp
+*.cpp.swp
+*.js.swp
+src/services/html/htmlservice
