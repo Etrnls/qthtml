@@ -48,6 +48,8 @@ private:
 
     QScopedPointer<QPlatformScreen> mScreen;
     QScopedPointer<QPlatformFontDatabase> mFontDatabase;
+
+    bool mDebug;
 };
 
 QT_END_NAMESPACE

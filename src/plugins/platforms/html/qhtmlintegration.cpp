@@ -50,6 +50,7 @@ QHtmlIntegration::QHtmlIntegration() :
     mEventDispatcher(createUnixEventDispatcher())
 #endif
 {
+    mDebug = true;
     QGuiApplicationPrivate::instance()->setEventDispatcher(mEventDispatcher);
 
     mHtmlService.reset(QServiceManager().loadInterface(QString::fromLatin1(interfaceName)));
@@ -64,11 +65,16 @@ QHtmlIntegration::QHtmlIntegration() :
 
 QPlatformWindow *QHtmlIntegration::createPlatformWindow(QWindow *window) const
 {
+    if (mDebug)
+        qDebug() << "QHtmlIntegration::createPlatformWindow";
+
     return new QHtmlWindow(window, mHtmlService.data());
 }
 
 QPlatformBackingStore *QHtmlIntegration::createPlatformBackingStore(QWindow *window) const
 {
+	if (mDebug)
+        qDebug() << "QHtmlIntegration::createPlatformBackingStore";
     return new QHtmlBackingStore(window, mHtmlService.data());
 }
 

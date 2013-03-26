@@ -54,6 +54,7 @@ public slots:
     void onMouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers);
 private:
     QObject *mHtmlService;
+    bool mDebug;
 
     int mWinId;
 };

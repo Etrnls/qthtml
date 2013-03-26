@@ -44,6 +44,7 @@ public slots:
     void setGeometry(int x, int y, int width, int height);
 private:
     QObject *mHtmlService;
+    bool mDebug;
 
     QRect mGeometry;
     QScopedPointer<QHtmlCursor> mCursor;

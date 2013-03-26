@@ -32,6 +32,10 @@ QT_BEGIN_NAMESPACE
 QHtmlScreen::QHtmlScreen(QObject *htmlService)
     : mHtmlService(htmlService)
 {
+    mDebug = true;
+	if (mDebug)
+    	qDebug() << "QHtmlScreen";
+
     mCursor.reset(new QHtmlCursor(this, mHtmlService));
     connect(mHtmlService, SIGNAL(setScreenGeometry(int, int, int, int)), SLOT(setGeometry(int, int, int, int)));
 
@@ -65,6 +69,9 @@ QImage::Format QHtmlScreen::format() const
 
 void QHtmlScreen::setGeometry(int x, int y, int width, int height)
 {
+	if (mDebug)
+    	qDebug() << "QHtmlScreen::setGeometry";
+
     mGeometry = QRect(x, y, width, height);
     QWindowSystemInterface::handleScreenGeometryChange(screen(), mGeometry);
 }
