@@ -33,6 +33,9 @@ QHtmlWindow::QHtmlWindow(QWindow *window, QObject *htmlService)
     mHtmlService(htmlService)
 {
     mDebug = true;
+
+	QWindowSystemInterface::setSynchronousWindowsSystemEvents(true); // resize - paint bug
+
     QMetaObject::invokeMethod(mHtmlService, "allocateWinId",
                               Q_RETURN_ARG(int, mWinId),
                               Q_ARG(int, static_cast<int>(window->type())));
@@ -94,6 +97,7 @@ void QHtmlWindow::setVisible(bool visible)
     QMetaObject::invokeMethod(mHtmlService, "setVisible",
                               Q_ARG(int, mWinId),
                               Q_ARG(bool, visible));
+    QPlatformWindow::setVisible(visible);
 }
 
 WId QHtmlWindow::winId() const
