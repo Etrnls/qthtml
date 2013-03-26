@@ -39,6 +39,8 @@
 
 #include <QtServiceFramework/QServiceManager>
 
+#include <../../../services/html/qhtmlservice.h> // trick for fast debugging
+
 QT_BEGIN_NAMESPACE
 
 static const char *interfaceName = "com.nokia.qt.qpa.HtmlService";
@@ -53,7 +55,8 @@ QHtmlIntegration::QHtmlIntegration() :
     mDebug = true;
     QGuiApplicationPrivate::instance()->setEventDispatcher(mEventDispatcher);
 
-    mHtmlService.reset(QServiceManager().loadInterface(QString::fromLatin1(interfaceName)));
+    //mHtmlService.reset(QServiceManager().loadInterface(QString::fromLatin1(interfaceName)));
+    mHtmlService.reset( new QHtmlService );  // trick for fast debugging
     if (mHtmlService.data() == NULL)
         exit(0);
 
