@@ -1,4 +1,7 @@
 TARGET = qhtml
+
+PLUGIN_TYPE = platforms
+PLUGIN_CLASS_NAME = QHtmlIntegrationPlugin
 load(qt_plugin)
 
 QT += serviceframework core-private gui-private platformsupport-private

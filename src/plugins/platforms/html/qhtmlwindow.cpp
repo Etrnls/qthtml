@@ -24,7 +24,7 @@
 #include "qhtmlwindow.h"
 
 #include <QtCore/QtDebug>
-#include <QtGui/QWindowSystemInterface>
+#include <qpa/qwindowsysteminterface.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -34,7 +34,7 @@ QHtmlWindow::QHtmlWindow(QWindow *window, QObject *htmlService)
 {
     QMetaObject::invokeMethod(mHtmlService, "allocateWinId",
                               Q_RETURN_ARG(int, mWinId),
-                              Q_ARG(int, static_cast<int>(window->windowType())));
+                              Q_ARG(int, static_cast<int>(window->type())));
 
     connect(mHtmlService, SIGNAL(destroy(int)),
                           SLOT(onDestroy(int)));

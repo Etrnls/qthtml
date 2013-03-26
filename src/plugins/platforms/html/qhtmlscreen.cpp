@@ -25,7 +25,7 @@
 #include "qhtmlcursor.h"
 
 #include <QtCore/QtDebug>
-#include <QtGui/QWindowSystemInterface>
+#include <qpa/qwindowsysteminterface.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -66,7 +66,7 @@ QImage::Format QHtmlScreen::format() const
 void QHtmlScreen::setGeometry(int x, int y, int width, int height)
 {
     mGeometry = QRect(x, y, width, height);
-    QWindowSystemInterface::handleScreenGeometryChange(screen());
+    QWindowSystemInterface::handleScreenGeometryChange(screen(), mGeometry);
 }
 
 QT_END_NAMESPACE

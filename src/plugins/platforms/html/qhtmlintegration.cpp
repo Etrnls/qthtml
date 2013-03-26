@@ -30,20 +30,31 @@
 #include <QtCore/QThread>
 #include <QtCore/QCoreApplication>
 #include <QtGui/private/qguiapplication_p.h>
-#include <QtPlatformSupport/private/qgenericunixeventdispatcher_p.h>
 #include <QtPlatformSupport/private/qgenericunixfontdatabase_p.h>
+#ifndef Q_OS_WIN
+#include <QtPlatformSupport/private/qgenericunixeventdispatcher_p.h>
+#else
+#include <QtCore/private/qeventdispatcher_win_p.h>
+#endif
+
 #include <QtServiceFramework/QServiceManager>
 
 QT_BEGIN_NAMESPACE
 
 static const char *interfaceName = "com.nokia.qt.qpa.HtmlService";
 
-QHtmlIntegration::QHtmlIntegration()
-    : mEventDispatcher(createUnixEventDispatcher())
+QHtmlIntegration::QHtmlIntegration() :
+#ifdef Q_OS_WIN
+    mEventDispatcher(new QEventDispatcherWin32())
+#else
+    mEventDispatcher(createUnixEventDispatcher())
+#endif
 {
     QGuiApplicationPrivate::instance()->setEventDispatcher(mEventDispatcher);
 
-    mHtmlService.reset(QServiceManager().loadInterface(QStringLiteral(interfaceName)));
+    mHtmlService.reset(QServiceManager().loadInterface(QString::fromLatin1(interfaceName)));
+    if (mHtmlService.data() == NULL)
+        exit(0);
 
     mScreen.reset(new QHtmlScreen(mHtmlService.data()));
     screenAdded(mScreen.data());

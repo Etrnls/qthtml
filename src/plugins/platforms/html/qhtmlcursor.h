@@ -24,7 +24,7 @@
 #ifndef QHTMLCURSOR_H
 #define QHTMLCURSOR_h
 
-#include <QtGui/QPlatformCursor>
+#include <qpa/QPlatformCursor.h>
 
 QT_BEGIN_NAMESPACE
 

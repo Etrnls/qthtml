@@ -47,6 +47,8 @@ int main(int argc, char** argv)
 
     // this will start the server and keep it running
     QObject *htmlService = QServiceManager().loadInterface(QString::fromLatin1(interfaceName));
+    if (htmlService == NULL)
+        exit(0);
 
     const int returnCode = app.exec();
     delete htmlService;

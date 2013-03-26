@@ -24,7 +24,7 @@
 #ifndef QHTMLWINDOW_H
 #define QHTMLWINDOW_H
 
-#include <QtGui/QPlatformWindow>
+#include <qpa/QPlatformWindow.h>
 
 QT_BEGIN_NAMESPACE
 

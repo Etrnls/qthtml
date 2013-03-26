@@ -24,7 +24,7 @@
 #include "qhtmlbackingstore.h"
 
 #include <QtCore/QBuffer>
-#include <QtGui/QPlatformWindow>
+#include <qpa/qplatformwindow.h>
 #include <QtCore/QtDebug>
 
 QT_BEGIN_NAMESPACE
@@ -84,7 +84,7 @@ bool QHtmlBackingStore::scroll(const QRegion &area, int dx, int dy)
 void QHtmlBackingStore::onFlush()
 {
     window()->handle()->setGeometry(window()->geometry());
-    window()->handle()->setVisible(window()->visible());
+    window()->handle()->setVisible(window()->isVisible());
     flush(QRect(QPoint(0, 0), window()->geometry().size()));
 }
 

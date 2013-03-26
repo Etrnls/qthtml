@@ -27,7 +27,7 @@
 #include <QtCore/QtDebug>
 
 QHtmlCursor::QHtmlCursor(QHtmlScreen *screen, QObject *htmlService)
-    : QPlatformCursor(screen),
+    : QPlatformCursor(),
       mHtmlService(htmlService)
 {
 }

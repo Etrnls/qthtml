@@ -52,7 +52,7 @@ int QHtmlService::getScreenHeight() const
 
 void QHtmlService::changeCursor(int shape) const
 {
-    sendMessage(MessageCommand::ChangeCursor, shape);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::ChangeCursor))), shape);
 }
 
 int QHtmlService::allocateWinId(int windowType)
@@ -66,45 +66,45 @@ int QHtmlService::allocateWinId(int windowType)
     mWinIds.insert(newWinId);
 
     const int popup = windowType == Qt::Popup ? 1 : 0;
-    sendMessage(MessageCommand::CreateWindow, newWinId, popup);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), newWinId, popup);
     return newWinId;
 }
 
 void QHtmlService::deallocateWinId(int winId)
 {
-    sendMessage(MessageCommand::DestroyWindow, winId);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::DestroyWindow))), winId);
     mWinIds.remove(winId);
 }
 
 void QHtmlService::setGeometry(int winId, int x, int y, int width, int height) const
 {
-    sendMessage(MessageCommand::SetGeometry, winId, x, y, width, height);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetGeometry))), winId, x, y, width, height);
 }
 
 void QHtmlService::setVisible(int winId, bool visible) const
 {
-    sendMessage(MessageCommand::SetVisible, winId, visible);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetVisible))), winId, visible);
 }
 
 void QHtmlService::setWindowTitle(int winId, const QString &title) const
 {
-    sendMessage(MessageCommand::SetWindowTitle, winId, QString::fromLatin1(title.toUtf8().toBase64().constData()));
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetWindowTitle))), winId, QString::fromLatin1(title.toUtf8().toBase64().constData()));
 }
 
 void QHtmlService::raise(int winId) const
 {
-    sendMessage(MessageCommand::Raise, winId);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::Raise))), winId);
 }
 
 void QHtmlService::flush(int winId, int x, int y, int width, int height, const QByteArray &imageData) const
 {
     const QString url = QStringLiteral("data:image/png;base64,") + QString::fromLatin1(imageData.toBase64().constData());
-    sendMessage(MessageCommand::Flush, winId, x, y, width, height, url);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::Flush))), winId, x, y, width, height, url);
 }
 
 void QHtmlService::scroll(int winId, int x, int y, int width, int height, int dx, int dy) const
 {
-    sendMessage(MessageCommand::Scroll, winId, x, y, width, height, dx, dy);
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::Scroll))), winId, x, y, width, height, dx, dy);
 }
 
 void QHtmlService::onServerNewConnection()
@@ -351,33 +351,176 @@ void QHtmlService::sendWebSocketHandshake(QTcpSocket *socket)
 
     // initialize commands
     foreach (int winId, mWinIds)
-        sendMessage(socket, MessageCommand::CreateWindow, winId);
+        sendMessage(socket, QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), winId);
     emit flush();
 }
 
-template <typename... Args>
-void QHtmlService::sendMessage(QTcpSocket *socket, MessageCommand command, Args... args) const
+//template <typename... Args>
+//void QHtmlService::sendMessage(QTcpSocket *socket, MessageCommand command, Args... args) const
+//{
+//    sendMessage(socket, QString(QChar::fromLatin1(static_cast<char>(command))), args...);
+//}
+
+//template <typename... Args>
+//void QHtmlService::sendMessage(MessageCommand command, Args... args) const
+//{
+//    sendMessage(QString(QChar::fromLatin1(static_cast<char>(command))), args...);
+//}
+
+//template <typename T, typename... Args>
+//void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T arg0, Args... args) const
+//{
+//    sendMessage(socket, message + QString::fromLatin1(" %1").arg(arg0), args...);
+//}
+
+//template <typename T, typename... Args>
+//void QHtmlService::sendMessage(const QString &message, T arg0, Args... args) const
+//{
+//    sendMessage(message + QString::fromLatin1(" %1").arg(arg0), args...);
+//}
+
+
+
+template <typename T1>
+void QHtmlService::sendMessage(const QString &message, T1 t1) const
 {
-    sendMessage(socket, QString(QChar::fromLatin1(static_cast<char>(command))), args...);
+    sendMessage(message + QString::fromLatin1(" %1").arg(t1));
+}
+template <typename T1, typename T2>
+void QHtmlService::sendMessage(const QString &message, T1 t1, T2 t2) const
+{
+    sendMessage(message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2)
+                );
+}
+template <typename T1, typename T2, typename T3>
+void QHtmlService::sendMessage(const QString &message, T1 t1, T2 t2, T3 t3) const
+{
+    sendMessage(message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4>
+void QHtmlService::sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4) const
+{
+    sendMessage(message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4, typename T5>
+void QHtmlService::sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) const
+{
+    sendMessage(message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4) +
+                QString::fromLatin1(" %1").arg(t5)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+void QHtmlService::sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) const
+{
+    sendMessage(message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4) +
+                QString::fromLatin1(" %1").arg(t5) +
+                QString::fromLatin1(" %1").arg(t6)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+void QHtmlService::sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) const
+{
+    sendMessage(message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4) +
+                QString::fromLatin1(" %1").arg(t5) +
+                QString::fromLatin1(" %1").arg(t6) +
+                QString::fromLatin1(" %1").arg(t7)
+                );
 }
 
-template <typename... Args>
-void QHtmlService::sendMessage(MessageCommand command, Args... args) const
+template <typename T1>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1) const
 {
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(command))), args...);
+    sendMessage(socket, message + QString::fromLatin1(" %1").arg(t1));
+}
+template <typename T1, typename T2>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1, T2 t2) const
+{
+    sendMessage(socket, message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2)
+                );
+}
+template <typename T1, typename T2, typename T3>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1, T2 t2, T3 t3) const
+{
+    sendMessage(socket, message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1, T2 t2, T3 t3, T4 t4) const
+{
+    sendMessage(socket, message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4, typename T5>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) const
+{
+    sendMessage(socket, message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4) +
+                QString::fromLatin1(" %1").arg(t5)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) const
+{
+    sendMessage(socket, message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4) +
+                QString::fromLatin1(" %1").arg(t5) +
+                QString::fromLatin1(" %1").arg(t6)
+                );
+}
+template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) const
+{
+    sendMessage(socket, message +
+                QString::fromLatin1(" %1").arg(t1) +
+                QString::fromLatin1(" %1").arg(t2) +
+                QString::fromLatin1(" %1").arg(t3) +
+                QString::fromLatin1(" %1").arg(t4) +
+                QString::fromLatin1(" %1").arg(t5) +
+                QString::fromLatin1(" %1").arg(t6) +
+                QString::fromLatin1(" %1").arg(t7)
+                );
 }
 
-template <typename T, typename... Args>
-void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T arg0, Args... args) const
-{
-    sendMessage(socket, message + QString::fromLatin1(" %1").arg(arg0), args...);
-}
 
-template <typename T, typename... Args>
-void QHtmlService::sendMessage(const QString &message, T arg0, Args... args) const
-{
-    sendMessage(message + QString::fromLatin1(" %1").arg(arg0), args...);
-}
+
 
 void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message) const
 {
@@ -388,7 +531,7 @@ void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message) const
 void QHtmlService::sendMessage(const QString &message) const
 {
     const QByteArray payload = message.toLatin1();
-    for (auto iter = mWebSocketFrameBuffers.constBegin(); iter != mWebSocketFrameBuffers.constEnd(); ++iter)
+    for ( QHash<QTcpSocket *, QByteArray>::ConstIterator iter = mWebSocketFrameBuffers.constBegin(); iter != mWebSocketFrameBuffers.constEnd(); ++iter)
         iter.key()->write(webSocketFrame(WS_TEXT, payload));
 }
 

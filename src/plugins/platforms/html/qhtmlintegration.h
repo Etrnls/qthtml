@@ -24,7 +24,7 @@
 #ifndef QHTMLINTEGRATION_H
 #define QHTMLINTEGRATION_H
 
-#include <QtGui/QPlatformIntegration>
+#include <qpa/qplatformintegration.h>
 
 QT_BEGIN_NAMESPACE
 

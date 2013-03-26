@@ -84,7 +84,7 @@ private:
         WS_PONG = 10
     };
 
-    enum class MessageCommand : char {
+    enum MessageCommand {
         SetScreenGeometry = 's',    // width, height
         ChangeCursor = 'c',         // shape
         CreateWindow = 'w',         // winId
@@ -115,18 +115,38 @@ private:
     void sendWebSocketHandshake(QTcpSocket *socket);
 
     // Qt HTTP Platform WebSocket Protocols
-    template <typename... Args>
-    void sendMessage(QTcpSocket *socket, MessageCommand command, Args... args) const;
-    template <typename... Args>
-    void sendMessage(MessageCommand command, Args... args) const;
-
-    template <typename T, typename... Args>
-    void sendMessage(QTcpSocket *socket, const QString &message, T arg0, Args... args) const;
-    template <typename T, typename... Args>
-    void sendMessage(const QString &message, T arg0, Args... args) const;
-
+    // yes. its stupid, but it works on VS2010 ))
     void sendMessage(const QString &message) const;
+    template <typename T1>
+    void sendMessage(const QString &message, T1 t1) const;
+    template <typename T1, typename T2>
+    void sendMessage(const QString &message, T1 t1, T2 t2) const;
+    template <typename T1, typename T2, typename T3>
+    void sendMessage(const QString &message, T1 t1, T2 t2, T3 t3) const;
+    template <typename T1, typename T2, typename T3, typename T4>
+    void sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4) const;
+    template <typename T1, typename T2, typename T3, typename T4, typename T5>
+    void sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) const;
+    template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+    void sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) const;
+    template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+    void sendMessage(const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) const;
+
     void sendMessage(QTcpSocket *socket, const QString &message) const;
+    template <typename T1>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1) const;
+    template <typename T1, typename T2>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2) const;
+    template <typename T1, typename T2, typename T3>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2, T3 t3) const;
+    template <typename T1, typename T2, typename T3, typename T4>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2, T3 t3, T4 t4) const;
+    template <typename T1, typename T2, typename T3, typename T4, typename T5>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) const;
+    template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) const;
+    template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+    void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) const;
 
     void processMessage(const QString &message) const;
 

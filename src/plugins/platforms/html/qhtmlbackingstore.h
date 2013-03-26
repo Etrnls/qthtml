@@ -24,7 +24,7 @@
 #ifndef QHTMLBACKINGSTORE_H
 #define QHTMLBACKINGSTORE_H
 
-#include <QtGui/QPlatformBackingStore>
+#include <qpa/qplatformbackingstore.h>
 #include <QtGui/QImage>
 
 QT_BEGIN_NAMESPACE

@@ -24,7 +24,7 @@
 #ifndef QHTMLSCREEN_H
 #define QHTMLSCREEN_H
 
-#include <QtGui/QPlatformScreen>
+#include <qpa/qplatformscreen.h>
 
 QT_BEGIN_NAMESPACE
 
