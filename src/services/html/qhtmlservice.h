@@ -28,6 +28,7 @@
 #include <QtCore/QRect>
 #include <QtCore/QStringList>
 #include <QtNetwork/QTcpServer>
+#include <QtCore/QMutexLocker>
 
 QT_BEGIN_NAMESPACE
 
@@ -156,6 +157,12 @@ private:
 
     mutable QRect mScreenGeometry;
     QSet<int> mWinIds;
+
+    //QMutex mWebSocketHandshakeHeadersMutex;
+    mutable QMutex mWebSocketFrameBuffersMutex;
+    QMutex mWinIdsMutex;
+
+    bool mDebug;
 };
 
 QT_END_NAMESPACE

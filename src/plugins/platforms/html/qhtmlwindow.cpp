@@ -55,6 +55,8 @@ QHtmlWindow::QHtmlWindow(QWindow *window, QObject *htmlService)
     connect(mHtmlService, SIGNAL(mouseWheel(int, int, int, int, int, int, int)),
                           SLOT(onMouseWheel(int, int, int, int, int, int, int)));
 
+    connect(mHtmlService, SIGNAL(flush()), SLOT(onFlush()));
+
     const QRect rect = window->geometry();
     QMetaObject::invokeMethod(mHtmlService, "setGeometry",
                               Q_ARG(int, mWinId),
@@ -131,6 +133,25 @@ void QHtmlWindow::raise()
     QMetaObject::invokeMethod(mHtmlService, "raise",
                               Q_ARG(int, mWinId));
     QPlatformWindow::raise();
+}
+
+void QHtmlWindow::onFlush()
+{
+    const QRect rect = window()->geometry();
+    QMetaObject::invokeMethod(mHtmlService, "setGeometry",
+                              Q_ARG(int, mWinId),
+                              Q_ARG(int, rect.x()),
+                              Q_ARG(int, rect.y()),
+                              Q_ARG(int, rect.width()),
+                              Q_ARG(int, rect.height()));
+
+    QMetaObject::invokeMethod(mHtmlService, "setWindowTitle",
+                              Q_ARG(int, mWinId),
+                              Q_ARG(QString, window()->title()));
+
+    QMetaObject::invokeMethod(mHtmlService, "setVisible",
+                              Q_ARG(int, mWinId),
+                              Q_ARG(bool, window()->isVisible()));
 }
 
 void QHtmlWindow::onDestroy(int winId)

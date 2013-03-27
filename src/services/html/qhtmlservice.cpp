@@ -31,11 +31,13 @@
 #include <QtNetwork/QTcpSocket>
 #include <QtGui/QImage>
 #include <QtCore/QtDebug>
+#include <QtCore/QMutexLocker>
 
 QT_BEGIN_NAMESPACE
 
 QHtmlService::QHtmlService() : mScreenGeometry(0, 0, INT_MAX, INT_MAX)
 {
+    mDebug = true;
     connect(&mServer, SIGNAL(newConnection()), SLOT(onServerNewConnection()));
     mServer.listen(QHostAddress::Any, 8080); // TODO configurable address and port
 }
@@ -58,12 +60,15 @@ void QHtmlService::changeCursor(int shape) const
 int QHtmlService::allocateWinId(int windowType)
 {
     int newWinId = 1;
+    {
+    QMutexLocker lock(&mWinIdsMutex);
     foreach (int winId, mWinIds)
         if (newWinId > winId)
             break;
         else
             ++newWinId;
     mWinIds.insert(newWinId);
+    }
 
     const int popup = windowType == Qt::Popup ? 1 : 0;
     sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), newWinId, popup);
@@ -73,6 +78,7 @@ int QHtmlService::allocateWinId(int windowType)
 void QHtmlService::deallocateWinId(int winId)
 {
     sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::DestroyWindow))), winId);
+    QMutexLocker lock(&mWinIdsMutex);
     mWinIds.remove(winId);
 }
 
@@ -111,6 +117,8 @@ void QHtmlService::onServerNewConnection()
 {
     while (mServer.hasPendingConnections()) {
         QTcpSocket * const socket = mServer.nextPendingConnection();
+        //if (mDebug)
+        //     qDebug() << "mServer.nextPendingConnection";
         connect(socket, SIGNAL(readyRead()), SLOT(onHttpSocketReadyRead()));
         connect(socket, SIGNAL(disconnected()), SLOT(onSocketDisconnected()));
     }
@@ -120,6 +128,8 @@ void QHtmlService::onHttpSocketReadyRead()
 {
     QTcpSocket * const socket = qobject_cast<QTcpSocket*>(sender());
     Q_ASSERT(socket);
+
+    //QMutexLocker lock(&mWebSocketHandshakeHeadersMutex);
 
     // If we are waiting for full websocket handshake header
     QHash<QTcpSocket *, QStringList>::iterator header = mWebSocketHandshakeHeaders.find(socket);
@@ -168,36 +178,43 @@ void QHtmlService::onHttpSocketReadyRead()
 void QHtmlService::onWebSocketReadyRead()
 {
     QTcpSocket * const socket = qobject_cast<QTcpSocket *>(sender());
-    QHash<QTcpSocket *, QByteArray>::Iterator iter = mWebSocketFrameBuffers.find(socket);
-    iter.value() += socket->readAll();
-
-    while (iter.value().size() >= 2)
+    QByteArray arr;
     {
-        bool fin = static_cast<quint8>(iter.value().constData()[0]) & 0x80;
-        WebSocketOpcode opcode = static_cast<WebSocketOpcode>(static_cast<quint8>(iter.value().constData()[0]) & 0x0f);
-        bool mask = static_cast<quint8>(iter.value().constData()[1]) & 0x80;
-        quint64 payloadLen = static_cast<quint8>(iter.value().constData()[1]) & 0x7f;
+    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+    QHash<QTcpSocket *, QByteArray>::Iterator iter = mWebSocketFrameBuffers.find(socket);
+    if (iter == mWebSocketFrameBuffers.end())
+        return;
+
+    arr = iter.value();
+    arr += socket->readAll();
+    }
+    while (arr.size() >= 2)
+    {
+        bool fin = static_cast<quint8>(arr.constData()[0]) & 0x80;
+        WebSocketOpcode opcode = static_cast<WebSocketOpcode>(static_cast<quint8>(arr.constData()[0]) & 0x0f);
+        bool mask = static_cast<quint8>(arr.constData()[1]) & 0x80;
+        quint64 payloadLen = static_cast<quint8>(arr.constData()[1]) & 0x7f;
 
         int headerLen = 2;
         if (payloadLen == 127) {
-            if (iter.value().size() < 10)
+            if (arr.size() < 10)
                 return;
-            payloadLen = qFromBigEndian<quint64>(reinterpret_cast<const uchar *>(iter.value().constData() + 2));
+            payloadLen = qFromBigEndian<quint64>(reinterpret_cast<const uchar *>(arr.constData() + 2));
             headerLen += 8;
         } else if (payloadLen == 126) {
-            if (iter.value().size() < 4)
+            if (arr.size() < 4)
                 return;
-            payloadLen = qFromBigEndian<quint16>(reinterpret_cast<const uchar *>(iter.value().constData() + 2));
+            payloadLen = qFromBigEndian<quint16>(reinterpret_cast<const uchar *>(arr.constData() + 2));
             headerLen += 2;
         }
 
         payloadLen += mask ? 4 : 0;
-        if (static_cast<quint64>(iter.value().size()) < payloadLen)
+        if (static_cast<quint64>(arr.size()) < payloadLen)
             return;
 
-        iter.value().remove(0, headerLen);
-        QByteArray payload = iter.value().left(payloadLen);
-        iter.value().remove(0, payloadLen);
+        arr.remove(0, headerLen);
+        QByteArray payload = arr.left(payloadLen);
+        arr.remove(0, payloadLen);
 
         if (mask) {
             for (int i = 4; i < payload.size(); ++i)
@@ -222,8 +239,17 @@ void QHtmlService::onWebSocketReadyRead()
 void QHtmlService::onSocketDisconnected()
 {
     QTcpSocket * const socket = qobject_cast<QTcpSocket *>(sender());
+    if (mDebug)
+         qDebug() << "QHtmlService::onSocketDisconnected";
+
+    {
+    //QMutexLocker lock(&mWebSocketHandshakeHeadersMutex);
     mWebSocketHandshakeHeaders.remove(socket);
+    }
+    {
+    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
     mWebSocketFrameBuffers.remove(socket);
+    }
     socket->deleteLater();
 }
 
@@ -295,6 +321,8 @@ void QHtmlService::sendWebSocketHandshake(QTcpSocket *socket)
 {
     static const char *SEC_WEBSOCKET_KEY_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
+    // QMutexLocker lock(&mWebSocketHandshakeHeadersMutex);
+
     QString key;
     foreach (const QString &line, mWebSocketHandshakeHeaders[socket]) {
         const QString field = line.section(QLatin1Char(':'), 0, 0);
@@ -347,11 +375,21 @@ void QHtmlService::sendWebSocketHandshake(QTcpSocket *socket)
                                                  "\r\n").arg(accept);
     socket->write(responseHeader.toLatin1());
     connect(socket, SIGNAL(readyRead()), SLOT(onWebSocketReadyRead()));
-    mWebSocketFrameBuffers.insert(socket, QByteArray());
 
+    if (mDebug)
+         qDebug() << "QHtmlService::sendWebSocketHandshake";
+
+    {
+    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+    mWebSocketFrameBuffers.insert(socket, QByteArray());
+    }
+
+    {
+    QMutexLocker lock(&mWinIdsMutex);
     // initialize commands
     foreach (int winId, mWinIds)
         sendMessage(socket, QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), winId);
+    }
     emit flush();
 }
 
@@ -531,6 +569,7 @@ void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message) const
 void QHtmlService::sendMessage(const QString &message) const
 {
     const QByteArray payload = message.toLatin1();
+    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
     for ( QHash<QTcpSocket *, QByteArray>::ConstIterator iter = mWebSocketFrameBuffers.constBegin(); iter != mWebSocketFrameBuffers.constEnd(); ++iter)
         iter.key()->write(webSocketFrame(WS_TEXT, payload));
 }

@@ -46,6 +46,8 @@ public:
     void setWindowTitle(const QString &title);
     void raise();
 public slots:
+    void onFlush();
+public slots:
     void onDestroy(int winId);
     void onActivated(int winId);
     void onSetGeometry(int winId, int x, int y, int width, int height);
