@@ -56,6 +56,7 @@ private:
     QImage mImage;
     QRegion mDirtyRegion;
     bool mDebug;
+    bool mPrintDebugImages;
 };
 
 QT_END_NAMESPACE

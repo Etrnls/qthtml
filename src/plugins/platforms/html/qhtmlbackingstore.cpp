@@ -34,7 +34,8 @@ QHtmlBackingStore::QHtmlBackingStore(QWindow *window, QObject *htmlService)
     mHtmlService(htmlService)
 {
     connect(mHtmlService, SIGNAL(flush()), SLOT(onFlush()));
-    mDebug = true;
+    mDebug = false;
+    mPrintDebugImages = false;
     if (mDebug)
         qDebug() << "QHtmlBackingStore::QHtmlBackingStore:" << (quintptr)this;
 }
@@ -46,7 +47,7 @@ QHtmlBackingStore::~QHtmlBackingStore()
 QPaintDevice *QHtmlBackingStore::paintDevice()
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::paintDevice";
+        qDebug() << "QHtmlBackingStore::paintDevice " << static_cast<int>(window()->winId());
 
     return &mImage;
 }
@@ -54,9 +55,9 @@ QPaintDevice *QHtmlBackingStore::paintDevice()
 void QHtmlBackingStore::flush(QWindow *window, const QRegion &region, const QPoint &offset)
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::flush";
+        qDebug() << "QHtmlBackingStore::flush " << static_cast<int>(window->winId());
 
-    if (mDebug) {
+    if (mPrintDebugImages) {
         static int c = 0;
         QString filename = QString::fromLatin1("output%1.png").arg(c++, 4, 10, QLatin1Char('0'));
         qDebug() << "QHtmlBackingStore::flush() saving contents to" << filename.toLocal8Bit().constData();
@@ -73,7 +74,7 @@ void QHtmlBackingStore::flush(QWindow *window, const QRegion &region, const QPoi
 void QHtmlBackingStore::resize(const QSize &size, const QRegion &staticContents)
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::resize";
+        qDebug() << "QHtmlBackingStore::resize " << static_cast<int>(window()->winId());
 
     Q_UNUSED(staticContents);
     if (mImage.size() != size)
@@ -86,7 +87,7 @@ extern void qt_scrollRectInImage(QImage &img, const QRect &rect, const QPoint &o
 bool QHtmlBackingStore::scroll(const QRegion &area, int dx, int dy)
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::scroll";
+        qDebug() << "QHtmlBackingStore::scroll " << static_cast<int>(window()->winId());
 
     const QPoint offset(dx, dy);
     foreach (const QRect &rect, area.rects()) {
@@ -106,7 +107,7 @@ bool QHtmlBackingStore::scroll(const QRegion &area, int dx, int dy)
 void QHtmlBackingStore::onFlush()
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::onFlush";
+        qDebug() << "QHtmlBackingStore::onFlush " << static_cast<int>(window()->winId());
 
     window()->handle()->setGeometry(window()->geometry());
     window()->handle()->setVisible(window()->isVisible());
@@ -116,14 +117,14 @@ void QHtmlBackingStore::onFlush()
 void QHtmlBackingStore::flush(const QRect &rect)
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::flush(rect)";
+        qDebug() << "QHtmlBackingStore::flush(rect) " << static_cast<int>(window()->winId());
 
     const QImage &subImage = mImage.copy(rect);
     QBuffer imageDataBuffer;
     subImage.save(&imageDataBuffer, "png");
     imageDataBuffer.close();
 
-    if (mDebug) {
+    if (mPrintDebugImages) {
         static int c = 0;
         QString filename = QString::fromLatin1("outputrect%1.png").arg(c++, 4, 10, QLatin1Char('0'));
         qDebug() << "QHtmlBackingStore::flush() saving contents to" << filename.toLocal8Bit().constData();
@@ -142,7 +143,7 @@ void QHtmlBackingStore::flush(const QRect &rect)
 void QHtmlBackingStore::beginPaint(const QRegion &region)
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::beginPaint";
+        qDebug() << "QHtmlBackingStore::beginPaint " << static_cast<int>(window()->winId());
 
     mDirtyRegion += region;
     QPlatformBackingStore::beginPaint(region);
@@ -151,7 +152,7 @@ void QHtmlBackingStore::beginPaint(const QRegion &region)
 void QHtmlBackingStore::endPaint()
 {
     if (mDebug)
-        qDebug() << "QHtmlBackingStore::endPaint";
+        qDebug() << "QHtmlBackingStore::endPaint " << static_cast<int>(window()->winId());
 
     QPlatformBackingStore::endPaint();
 }

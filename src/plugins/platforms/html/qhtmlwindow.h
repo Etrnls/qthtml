@@ -55,6 +55,7 @@ public slots:
 private:
     QObject *mHtmlService;
     bool mDebug;
+    bool mDebugEvents;
 
     int mWinId;
 };
