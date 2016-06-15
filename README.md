@@ -1,5 +1,5 @@
 This is the Qt HTML backend utilizing the Qt Platform Abstraction (QPA).
-Compile against Qt5 (Depend on the Qt Service Framework in qtsystems).
+Compile against Qt5
 
 [Video Demo](http://www.youtube.com/watch?v=qDyWjNju1yU)
 

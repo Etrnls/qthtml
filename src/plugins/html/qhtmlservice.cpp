@@ -42,6 +42,11 @@ QHtmlService::QHtmlService() : mScreenGeometry(0, 0, INT_MAX, INT_MAX)
     mServer.listen(QHostAddress::Any, 8080); // TODO configurable address and port
 }
 
+QHtmlService::~QHtmlService()
+{
+
+}
+
 int QHtmlService::getScreenWidth() const
 {
     return mScreenGeometry.width();
@@ -230,7 +235,7 @@ void QHtmlService::onWebSocketReadyRead()
             processMessage(QString::fromLatin1(payload.constData()));
             break;
         default:
-            qWarning(qPrintable(QString::fromLatin1("Unhandled opcode '%1'").arg(opcode)));
+            qWarning() << QString::fromLatin1("Unhandled opcode '%1'").arg(opcode);
             break;
         }
     }
@@ -622,7 +627,7 @@ void QHtmlService::processMessage(const QString &message) const
                         args[6].toInt(), args[7].toInt());
         break;
     default:
-        qWarning(qPrintable(QString::fromLatin1("Unhandled Message '%1'").arg(message)));
+        qWarning() << QString::fromLatin1("Unhandled Message '%1'").arg(message);
         break;
     }
 }

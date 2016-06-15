@@ -23,7 +23,8 @@
 
 #include "qhtmlintegration.h"
 
-#include <qpa/QPlatformIntegrationPlugin.h>
+//#include <qpa/QPlatformIntegrationPlugin.h>
+#include <qpa/qplatformintegrationplugin.h>
 #include <QtCore/QtDebug>
 
 QT_BEGIN_NAMESPACE
@@ -31,7 +32,7 @@ QT_BEGIN_NAMESPACE
 class QHtmlIntegrationPlugin : public QPlatformIntegrationPlugin
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.1" FILE "html.json")
+    Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.2" FILE "html.json")
 public:
     QStringList keys() const;
     QPlatformIntegration *create(const QString&, const QStringList&);

@@ -21,24 +21,39 @@
 **
 ****************************************************************************/
 
-#ifndef QHTMLCURSOR_H
-#define QHTMLCURSOR_h
+#ifndef QHTMLINTEGRATION_H
+#define QHTMLINTEGRATION_H
 
-#include <qpa/QPlatformCursor.h>
+#include <qpa/qplatformintegration.h>
+//#include <QtGui/QPlatformIntegrationPlugin>
 
 QT_BEGIN_NAMESPACE
 
-class QHtmlScreen;
+class QAbstractEventDispatcher;
 
-class QHtmlCursor : public QPlatformCursor
+class QHtmlIntegration : public QPlatformIntegration
 {
-    Q_OBJECT
 public:
-    QHtmlCursor(QHtmlScreen *screen, QObject *htmlService);
-    
-    void changeCursor(QCursor *windowCursor, QWindow *window);
+    QHtmlIntegration();
+
+    QPlatformWindow *createPlatformWindow(QWindow *window) const;
+    QPlatformBackingStore *createPlatformBackingStore(QWindow *window) const;
+
+//    QAbstractEventDispatcher *guiThreadEventDispatcher() const;
+
+    QPlatformFontDatabase *fontDatabase() const;
+    // Event dispatcher:
+    virtual QAbstractEventDispatcher *createEventDispatcher() const;
+
 private:
-    QObject *mHtmlService;
+    QAbstractEventDispatcher *mEventDispatcher;
+
+    QScopedPointer<QObject> mHtmlService;
+
+    QScopedPointer<QPlatformScreen> mScreen;
+    QScopedPointer<QPlatformFontDatabase> mFontDatabase;
+
+    bool mDebug;
 };
 
 QT_END_NAMESPACE

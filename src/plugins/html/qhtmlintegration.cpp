@@ -37,9 +37,7 @@
 #include <QtCore/private/qeventdispatcher_win_p.h>
 #endif
 
-#include <QtServiceFramework/QServiceManager>
-
-#include <../../../services/html/qhtmlservice.h> // trick for fast debugging
+#include "qhtmlservice.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -53,10 +51,10 @@ QHtmlIntegration::QHtmlIntegration() :
 #endif
 {
     mDebug = true;
-    QGuiApplicationPrivate::instance()->setEventDispatcher(mEventDispatcher);
+    QGuiApplication::instance()->setEventDispatcher(mEventDispatcher);
 
     //mHtmlService.reset(QServiceManager().loadInterface(QString::fromLatin1(interfaceName)));
-    mHtmlService.reset( new QHtmlService );  // trick for fast debugging
+    mHtmlService.reset( new QHtmlService() );
     if (mHtmlService.data() == NULL)
         exit(0);
 
@@ -81,10 +79,15 @@ QPlatformBackingStore *QHtmlIntegration::createPlatformBackingStore(QWindow *win
     return new QHtmlBackingStore(window, mHtmlService.data());
 }
 
-QAbstractEventDispatcher *QHtmlIntegration::guiThreadEventDispatcher() const
+QAbstractEventDispatcher *QHtmlIntegration::createEventDispatcher() const
 {
     return mEventDispatcher;
 }
+
+//QAbstractEventDispatcher *QHtmlIntegration::guiThreadEventDispatcher() const
+//{
+//    return mEventDispatcher;
+//}
 
 QPlatformFontDatabase *QHtmlIntegration::fontDatabase() const
 {

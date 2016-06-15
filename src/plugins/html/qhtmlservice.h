@@ -37,6 +37,7 @@ class QHtmlService : public QObject
 	Q_OBJECT
 public:
     QHtmlService();
+    ~QHtmlService();
 
     // PlatformScreen Services
     Q_INVOKABLE int getScreenWidth() const;
