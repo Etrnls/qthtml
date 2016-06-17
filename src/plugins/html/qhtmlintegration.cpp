@@ -53,7 +53,6 @@ QHtmlIntegration::QHtmlIntegration() :
     mDebug = true;
     QGuiApplication::instance()->setEventDispatcher(mEventDispatcher);
 
-    //mHtmlService.reset(QServiceManager().loadInterface(QString::fromLatin1(interfaceName)));
     mHtmlService.reset( new QHtmlService() );
     if (mHtmlService.data() == NULL)
         exit(0);
@@ -62,6 +61,11 @@ QHtmlIntegration::QHtmlIntegration() :
     screenAdded(mScreen.data());
 
     mFontDatabase.reset(new QGenericUnixFontDatabase());
+}
+
+QHtmlIntegration::~QHtmlIntegration()
+{
+    qDebug() << "QHtmlIntegration::~QHtmlIntegration";
 }
 
 QPlatformWindow *QHtmlIntegration::createPlatformWindow(QWindow *window) const
@@ -83,11 +87,6 @@ QAbstractEventDispatcher *QHtmlIntegration::createEventDispatcher() const
 {
     return mEventDispatcher;
 }
-
-//QAbstractEventDispatcher *QHtmlIntegration::guiThreadEventDispatcher() const
-//{
-//    return mEventDispatcher;
-//}
 
 QPlatformFontDatabase *QHtmlIntegration::fontDatabase() const
 {

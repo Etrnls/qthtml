@@ -7,6 +7,7 @@ load(qt_plugin)
 
 
 QT += core-private gui-private platformsupport-private network
+CONFIG += qpa/genericunixfontdatabase   #fonts support
 
 #DEFINES += \
 #           QT_NO_CAST_FROM_BYTEARRAY \
@@ -38,7 +39,10 @@ SOURCES = \
 
 OTHER_FILES += \
     client.js \
-    client.html
+    client.html \
+    jquery.min.js \
+    jquery-ui.min.js \
+    jquery-ui.css
 
 RESOURCES += \
     html.qrc

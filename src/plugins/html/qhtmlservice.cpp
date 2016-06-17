@@ -252,8 +252,9 @@ void QHtmlService::onSocketDisconnected()
     mWebSocketHandshakeHeaders.remove(socket);
     }
     {
-    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
-    mWebSocketFrameBuffers.remove(socket);
+        QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+        qDebug() <<  "WebSocketFrameBuffers size - " << mWebSocketFrameBuffers.size();
+        if (mWebSocketFrameBuffers.size() != 0)    mWebSocketFrameBuffers.remove(socket);
     }
     socket->deleteLater();
 }
@@ -282,6 +283,10 @@ QString QHtmlService::guessMimeType(const QString &suffix)
         return QStringLiteral("text/html");
     else if (suffix == QStringLiteral("js"))
         return QStringLiteral("text/javascript");
+    else if (suffix == QStringLiteral("css"))
+        return QStringLiteral("text/css");
+    else if (suffix == QStringLiteral("png"))
+        return QStringLiteral("image/webp");
     else
         return QStringLiteral("");
 }
