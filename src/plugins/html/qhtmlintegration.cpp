@@ -41,8 +41,6 @@
 
 QT_BEGIN_NAMESPACE
 
-static const char *interfaceName = "com.nokia.qt.qpa.HtmlService";
-
 QHtmlIntegration::QHtmlIntegration() :
 #ifdef Q_OS_WIN
     mEventDispatcher(new QEventDispatcherWin32())
@@ -50,6 +48,7 @@ QHtmlIntegration::QHtmlIntegration() :
     mEventDispatcher(createUnixEventDispatcher())
 #endif
 {
+    qDebug() <<__FUNCTION__;
     mDebug = true;
     QGuiApplication::instance()->setEventDispatcher(mEventDispatcher);
 
@@ -78,13 +77,14 @@ QPlatformWindow *QHtmlIntegration::createPlatformWindow(QWindow *window) const
 
 QPlatformBackingStore *QHtmlIntegration::createPlatformBackingStore(QWindow *window) const
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlIntegration::createPlatformBackingStore";
     return new QHtmlBackingStore(window, mHtmlService.data());
 }
 
 QAbstractEventDispatcher *QHtmlIntegration::createEventDispatcher() const
 {
+    qDebug() <<__FUNCTION__;
     return mEventDispatcher;
 }
 

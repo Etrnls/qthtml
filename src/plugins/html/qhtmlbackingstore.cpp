@@ -36,8 +36,12 @@ QHtmlBackingStore::QHtmlBackingStore(QWindow *window, QObject *htmlService)
     connect(mHtmlService, SIGNAL(flush()), SLOT(onFlush()));
     mDebug = false;
     mPrintDebugImages = false;
-    if (mDebug)
-        qDebug() << "QHtmlBackingStore::QHtmlBackingStore:" << (quintptr)this;
+
+	bool draw_ret = false;
+    QMetaObject::invokeMethod(mHtmlService, "drawJSWindow"
+                              , Q_RETURN_ARG(bool, draw_ret)
+                              , Q_ARG(int, static_cast<int>(window->winId()))
+                              , Q_ARG(int, static_cast<int>(window->type())));
 }
 
 QHtmlBackingStore::~QHtmlBackingStore()

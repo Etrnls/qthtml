@@ -24,7 +24,6 @@
 #ifndef QHTMLWINDOW_H
 #define QHTMLWINDOW_H
 
-//#include <qpa/QPlatformWindow.h>
 #include <qpa/qplatformwindow.h>
 
 QT_BEGIN_NAMESPACE
@@ -46,21 +45,28 @@ public:
 
     void setWindowTitle(const QString &title);
     void raise();
+
+    bool setKeyboardGrabEnabled(bool) Q_DECL_OVERRIDE { return false; }
+    void propagateSizeHints() Q_DECL_OVERRIDE { }
+
+    void lower() Q_DECL_OVERRIDE    {}
+
 public slots:
     void onFlush();
 public slots:
-    void onDestroy(int winId);
-    void onActivated(int winId);
-    void onSetGeometry(int winId, int x, int y, int width, int height);
-    void onKeyEvent(int winId, int type, int code, int modifiers, const QString &text);
-    void onMouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers);
-    void onMouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers);
+    void onDestroy(int winId, int instance_id);
+    void onActivated(int winId, int instance_id);
+    void onSetGeometry(int winId, int x, int y, int width, int height, int instance_id);
+    void onKeyEvent(int winId, int type, int code, int modifiers, const QString &text, int instance_id);
+    void onMouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers, int instance_id);
+    void onMouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers, int instance_id);
 private:
     QObject *mHtmlService;
     bool mDebug;
     bool mDebugEvents;
 
     int mWinId;
+    const int mInstanceId;
 };
 
 QT_END_NAMESPACE

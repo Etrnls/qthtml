@@ -118,7 +118,7 @@ function base64Decode(s)
 {
     s = s.replace(new RegExp('[^' + base64chars.join('') + '=]', 'g'), '');
 
-    var p = (s.charAt(s.length - 1) == '=' ? (s.charAt(s.length - 2) == '=' ? 'AA' : 'A') : ''); 
+    var p = (s.charAt(s.length - 1) == '=' ? (s.charAt(s.length - 2) == '=' ? 'AA' : 'A') : '');
     var r = '';
     s = s.substr(0, s.length - p.length) + p;
 
@@ -468,6 +468,10 @@ function processMessage(message) {
         context.globalCompositeOperation = 'copy';
         context.drawImage(context.canvas, x, y, width, height,
                           x + dx, y + dy, width, height);
+        break;
+    case 'D':   //debugging
+        console.log('recieved from plugin - ', args[1]);
+        //sendMessage('D', [args[1]]);
         break;
     }
 }

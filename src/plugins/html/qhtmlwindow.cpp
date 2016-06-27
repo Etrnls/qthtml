@@ -20,7 +20,7 @@
 ** <http://www.gnu.org/licenses/>.
 **
 ****************************************************************************/
-
+#include <QtGlobal>
 #include "qhtmlwindow.h"
 
 #include <QtCore/QtDebug>
@@ -30,30 +30,35 @@ QT_BEGIN_NAMESPACE
 
 QHtmlWindow::QHtmlWindow(QWindow *window, QObject *htmlService)
     : QPlatformWindow(window),
-    mHtmlService(htmlService)
+    mHtmlService(htmlService),
+    mInstanceId(qrand())
 {
     mDebug = true;
     mDebugEvents = false;
 
-	QWindowSystemInterface::setSynchronousWindowsSystemEvents(true); // resize - paint bug
+#if QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
+    QWindowSystemInterface::setSynchronousWindowsSystemEvents(true); // resize - paint bug
+#else
+    QWindowSystemInterface::setSynchronousWindowSystemEvents(true); // resize - paint bug
+#endif
 
-    QMetaObject::invokeMethod(mHtmlService, "allocateWinId",
-                              Q_RETURN_ARG(int, mWinId),
-                              Q_ARG(int, static_cast<int>(window->type())));
+    QMetaObject::invokeMethod(mHtmlService, "generateWinId"
+                              , Q_RETURN_ARG(int, mWinId)
+                              , Q_ARG(int, mInstanceId));
 
-    connect(mHtmlService, SIGNAL(destroy(int)),
-                          SLOT(onDestroy(int)));
-    connect(mHtmlService, SIGNAL(activated(int)),
-                          SLOT(onActivated(int)));
-    connect(mHtmlService, SIGNAL(setWindowGeometry(int, int, int, int, int)),
-                          SLOT(onSetGeometry(int, int, int, int, int)));
+    connect(mHtmlService, SIGNAL(destroy(int, int)),
+                          SLOT(onDestroy(int, int)));
+    connect(mHtmlService, SIGNAL(activated(int, int)),
+                          SLOT(onActivated(int, int)));
+    connect(mHtmlService, SIGNAL(setWindowGeometry(int, int, int, int, int, int)),
+                          SLOT(onSetGeometry(int, int, int, int, int, int)));
 
-    connect(mHtmlService, SIGNAL(keyEvent(int, int, int, int, QString)),
-                          SLOT(onKeyEvent(int, int, int, int, QString)));
-    connect(mHtmlService, SIGNAL(mouseEvent(int, int, int, int, int, int, int)),
-                          SLOT(onMouseEvent(int, int, int, int, int, int, int)));
-    connect(mHtmlService, SIGNAL(mouseWheel(int, int, int, int, int, int, int)),
-                          SLOT(onMouseWheel(int, int, int, int, int, int, int)));
+    connect(mHtmlService, SIGNAL(keyEvent(int, int, int, int, QString, int)),
+                          SLOT(onKeyEvent(int, int, int, int, QString, int)));
+    connect(mHtmlService, SIGNAL(mouseEvent(int, int, int, int, int, int, int, int)),
+                          SLOT(onMouseEvent(int, int, int, int, int, int, int, int)));
+    connect(mHtmlService, SIGNAL(mouseWheel(int, int, int, int, int, int, int, int)),
+                          SLOT(onMouseWheel(int, int, int, int, int, int, int, int)));
 
     connect(mHtmlService, SIGNAL(flush()), SLOT(onFlush()));
 
@@ -63,35 +68,43 @@ QHtmlWindow::QHtmlWindow(QWindow *window, QObject *htmlService)
                               Q_ARG(int, rect.x()),
                               Q_ARG(int, rect.y()),
                               Q_ARG(int, rect.width()),
-                              Q_ARG(int, rect.height()));
+                              Q_ARG(int, rect.height()),
+                              Q_ARG(int, mInstanceId));
 }
 
 QHtmlWindow::~QHtmlWindow()
 {
-    if (mDebug)
-        qDebug() << "QHtmlWindow::~QHtmlWindow " << mWinId;
+        qDebug() << "QHtmlWindow::~QHtmlWindow mWinId - " << mWinId;
 
     QMetaObject::invokeMethod(mHtmlService, "deallocateWinId",
-                              Q_ARG(int, mWinId));
+                              Q_ARG(int, mWinId),
+                              Q_ARG(int, mInstanceId));
 }
 
 void QHtmlWindow::setGeometry(const QRect &rect)
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlWindow::setGeometry " << mWinId;
 
     QPlatformWindow::setGeometry(rect);
+    qDebug() << "QHtmlWindow::setGeometry " << mWinId
+             << " x -" << rect.x()
+             << " y - " << rect.y()
+             << " width - " << rect.width()
+             << " height - " << rect.height();
+
     QMetaObject::invokeMethod(mHtmlService, "setGeometry",
                               Q_ARG(int, mWinId),
                               Q_ARG(int, rect.x()),
                               Q_ARG(int, rect.y()),
                               Q_ARG(int, rect.width()),
-                              Q_ARG(int, rect.height()));
+                              Q_ARG(int, rect.height()),
+                              Q_ARG(int, mInstanceId));
 }
 
 QMargins QHtmlWindow::frameMargins() const
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlWindow::frameMargins " << mWinId;
 
     // TODO
@@ -100,12 +113,13 @@ QMargins QHtmlWindow::frameMargins() const
 
 void QHtmlWindow::setVisible(bool visible)
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlWindow::setVisible " << mWinId;
 
     QMetaObject::invokeMethod(mHtmlService, "setVisible",
                               Q_ARG(int, mWinId),
-                              Q_ARG(bool, visible));
+                              Q_ARG(bool, visible),
+                              Q_ARG(int, mInstanceId));
     QPlatformWindow::setVisible(visible);
 }
 
@@ -116,22 +130,24 @@ WId QHtmlWindow::winId() const
 
 void QHtmlWindow::setWindowTitle(const QString &title)
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlWindow::setWindowTitle " << mWinId;
 
     QMetaObject::invokeMethod(mHtmlService, "setWindowTitle",
                               Q_ARG(int, mWinId),
-                              Q_ARG(QString, title));
+                              Q_ARG(QString, title),
+                              Q_ARG(int, mInstanceId));
      QPlatformWindow::setWindowTitle(title);
 }
 
 void QHtmlWindow::raise()
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlWindow::raise " << mWinId;
 
     QMetaObject::invokeMethod(mHtmlService, "raise",
-                              Q_ARG(int, mWinId));
+                              Q_ARG(int, mWinId),
+                              Q_ARG(int, mInstanceId));
     QPlatformWindow::raise();
 }
 
@@ -143,76 +159,92 @@ void QHtmlWindow::onFlush()
                               Q_ARG(int, rect.x()),
                               Q_ARG(int, rect.y()),
                               Q_ARG(int, rect.width()),
-                              Q_ARG(int, rect.height()));
+                              Q_ARG(int, rect.height()),
+                              Q_ARG(int, mInstanceId));
 
     QMetaObject::invokeMethod(mHtmlService, "setWindowTitle",
                               Q_ARG(int, mWinId),
-                              Q_ARG(QString, window()->title()));
+                              Q_ARG(QString, window()->title()),
+                              Q_ARG(int, mInstanceId));
 
     QMetaObject::invokeMethod(mHtmlService, "setVisible",
                               Q_ARG(int, mWinId),
-                              Q_ARG(bool, window()->isVisible()));
+                              Q_ARG(bool, window()->isVisible()),
+                              Q_ARG(int, mInstanceId));
 }
 
-void QHtmlWindow::onDestroy(int winId)
+void QHtmlWindow::onDestroy(int winId, int instance_id)
 {
-	if (mDebug)
-        qDebug() << "QHtmlWindow::onDestroy " << mWinId;
-
-    if (winId == mWinId) {
+    if (winId == mWinId && instance_id == mInstanceId)
+    {
+        if (mDebug)
+            qDebug() << "QHtmlWindow::onDestroy " << mWinId;
         QWindowSystemInterface::handleCloseEvent(window());
     }
 }
 
-void QHtmlWindow::onActivated(int winId)
+void QHtmlWindow::onActivated(int winId, int instance_id)
 {
-	if (mDebug)
+    if (mDebug)
         qDebug() << "QHtmlWindow::onActivated " << mWinId;
 
-    if (winId == mWinId) {
+    if (winId == mWinId && instance_id == mInstanceId)
+    {
         QWindowSystemInterface::handleWindowActivated(window());
     }
 }
 
-void QHtmlWindow::onSetGeometry(int winId, int x, int y, int width, int height)
+void QHtmlWindow::onSetGeometry(int winId, int x, int y, int width, int height, int instance_id)
 {
-	if (mDebug)
-        qDebug() << "QHtmlWindow::onSetGeometry " << mWinId;
+    if (winId == mWinId && instance_id == mInstanceId)
+    {
+        if (mDebug)
+            qDebug() << "QHtmlWindow::onSetGeometry " << mWinId
+                     << " x -" << x
+                     << " y - " << y
+                     << " width - " << width
+                     << " height - " << height;
 
-    if (winId == mWinId) {
         const QRect rect(x, y, width, height);
         QPlatformWindow::setGeometry(rect);
         QWindowSystemInterface::handleGeometryChange(window(), rect);
     }
 }
 
-void QHtmlWindow::onKeyEvent(int winId, int type, int code, int modifiers, const QString &text)
+void QHtmlWindow::onKeyEvent(int winId, int type, int code, int modifiers, const QString &text, int instance_id)
 {
     if (mDebugEvents)
         qDebug() << "QHtmlWindow::onKeyEvent " << mWinId;
 
-    if (winId == mWinId) {
+    if (winId == mWinId && instance_id == mInstanceId)
+    {
         QWindowSystemInterface::handleKeyEvent(window(), QEvent::Type(type), code, Qt::KeyboardModifiers(modifiers), text);
     }
 }
 
-void QHtmlWindow::onMouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers)
+void QHtmlWindow::onMouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers, int instance_id)
 {
-    if (mDebugEvents)
-        qDebug() << "QHtmlWindow::onMouseEvent " << mWinId;
+    if (winId == mWinId && instance_id == mInstanceId)
+    {
 
-    if (winId == mWinId) {
+        if (mDebugEvents)
+            qDebug() << "QHtmlWindow::onMouseEvent " << mWinId;
+
+        if (buttons == 1)
+            qDebug() << localX << localY << globalX << globalY;
+
         QWindowSystemInterface::handleMouseEvent(window(), QPoint(localX, localY), QPoint(globalX, globalY),
                                                  Qt::MouseButtons(buttons), Qt::KeyboardModifiers(modifiers));
     }
 }
 
-void QHtmlWindow::onMouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers)
+void QHtmlWindow::onMouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers, int instance_id)
 {
     if (mDebugEvents)
         qDebug() << "QHtmlWindow::onMouseWheel " << mWinId;
 
-    if (winId == mWinId) {
+    if (winId == mWinId && instance_id == mInstanceId)
+    {
         delta *= 120;
         QWindowSystemInterface::handleWheelEvent(window(), QPoint(localX, localY), QPoint(globalX, globalY),
                                                  delta, Qt::Vertical, Qt::KeyboardModifiers(modifiers));

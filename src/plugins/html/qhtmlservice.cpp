@@ -29,22 +29,50 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QCryptographicHash>
 #include <QtNetwork/QTcpSocket>
-#include <QtGui/QImage>
+#include <QtNetwork/QTcpServer>
 #include <QtCore/QtDebug>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QSocketNotifier>
 
 QT_BEGIN_NAMESPACE
 
-QHtmlService::QHtmlService() : mScreenGeometry(0, 0, INT_MAX, INT_MAX)
+static int sWinIdCounter = 1;
+
+QHtmlService::QHtmlService()
+    : mpServer(NULL)
+    , mWebSocketHandshakeHeaders()
+    , mWebSocketFrameBuffers()
+    , mScreenGeometry(0, 0, INT_MAX, INT_MAX)
+    , mWinIds()
+    , mDebug(true)
+
 {
-    mDebug = true;
-    connect(&mServer, SIGNAL(newConnection()), SLOT(onServerNewConnection()));
-    mServer.listen(QHostAddress::Any, 8080); // TODO configurable address and port
+    mpServer = new QTcpServer(this);
+    connect(mpServer, SIGNAL(newConnection()), SLOT(onServerNewConnection()));
+    mpServer->listen(QHostAddress::Any, 8080); // TODO configurable address and port
 }
 
 QHtmlService::~QHtmlService()
 {
+    qDebug()<<__FUNCTION__;
+    disconnect(this);   //disconnect from all signals
 
+    mpServer->close();
+
+    {
+        QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+        for ( QHash<QTcpSocket *, QByteArray>::ConstIterator iter = mWebSocketFrameBuffers.constBegin(); iter != mWebSocketFrameBuffers.constEnd(); ++iter)
+        {
+            disconnect(iter.key());
+            iter.key()->close();
+        }
+        mWebSocketFrameBuffers.clear();
+    }
+
+    {
+        QMutexLocker lock(&mWinIdsMutex);
+        mWinIds.clear();
+    }
 }
 
 int QHtmlService::getScreenWidth() const
@@ -62,49 +90,94 @@ void QHtmlService::changeCursor(int shape) const
     sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::ChangeCursor))), shape);
 }
 
-int QHtmlService::allocateWinId(int windowType)
+int QHtmlService::generateWinId(int instance_id)
 {
-    int newWinId = 1;
     {
-    QMutexLocker lock(&mWinIdsMutex);
-    foreach (int winId, mWinIds)
-        if (newWinId > winId)
-            break;
-        else
-            ++newWinId;
-    mWinIds.insert(newWinId);
+        QMutexLocker lock(&mWinIdsMutex);
+        sWinIdCounter++;
+
+        tWinIdStruct s;
+        s.instance_id = instance_id;
+        s.windId = sWinIdCounter;
+        s.st = not_showed;
+
+        mWinIds.push_back(s);
     }
 
+    return sWinIdCounter;
+}
+
+bool QHtmlService::drawJSWindow(int winId, int windowType)
+{
+    bool wasFound = false;
+    {
+        QMutexLocker lock(&mWinIdsMutex);
+        for (int i = mWinIds.size()-1; i >= 0; --i)
+        {
+            if (winId == mWinIds[i].windId)
+            {
+                mWinIds[i].st = showed;
+                wasFound = true;
+                break;
+            }
+        }
+    }
+
+    if(!wasFound)   return false;
+
     const int popup = windowType == Qt::Popup ? 1 : 0;
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), newWinId, popup);
-    return newWinId;
+    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), winId, popup);
+    return true;
 }
 
-void QHtmlService::deallocateWinId(int winId)
+void QHtmlService::deallocateWinId(int winId, int instance_id)
 {
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::DestroyWindow))), winId);
+    if (isAllowedWinId(winId, instance_id))
+        sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::DestroyWindow))), winId);
+
     QMutexLocker lock(&mWinIdsMutex);
-    mWinIds.remove(winId);
+    for (auto i = mWinIds.begin(); i != mWinIds.end(); i++)
+    {
+        if ((*i).instance_id == instance_id && (*i).windId == winId)
+        {
+            mWinIds.erase(i);
+            break;
+        }
+    }
+
+    //remove all disabled windows also
+    for (auto i = mWinIds.begin(); i != mWinIds.end(); i++)
+    {
+        if ((*i).st == not_showed)
+        {
+            (*i).st = awaiting_removal;
+            emit destroy((*i).windId, (*i).instance_id);
+        }
+    }
 }
 
-void QHtmlService::setGeometry(int winId, int x, int y, int width, int height) const
+void QHtmlService::setGeometry(int winId, int x, int y, int width, int height, int instance_id) const
 {
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetGeometry))), winId, x, y, width, height);
+    if (isAllowedWinId(winId, instance_id))
+        sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetGeometry))), winId, x, y, width, height);
 }
 
-void QHtmlService::setVisible(int winId, bool visible) const
+void QHtmlService::setVisible(int winId, bool visible, int instance_id) const
 {
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetVisible))), winId, visible);
+    if (isAllowedWinId(winId, instance_id))
+        sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetVisible))), winId, visible);
 }
 
-void QHtmlService::setWindowTitle(int winId, const QString &title) const
+void QHtmlService::setWindowTitle(int winId, const QString &title, int instance_id) const
 {
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetWindowTitle))), winId, QString::fromLatin1(title.toUtf8().toBase64().constData()));
+    if (isAllowedWinId(winId, instance_id))
+        sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::SetWindowTitle))), winId, QString::fromLatin1(title.toUtf8().toBase64().constData()));
 }
 
-void QHtmlService::raise(int winId) const
+void QHtmlService::raise(int winId, int instance_id) const
 {
-    sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::Raise))), winId);
+    if (isAllowedWinId(winId, instance_id))
+        sendMessage(QString(QChar::fromLatin1(static_cast<char>(MessageCommand::Raise))), winId);
 }
 
 void QHtmlService::flush(int winId, int x, int y, int width, int height, const QByteArray &imageData) const
@@ -120,10 +193,11 @@ void QHtmlService::scroll(int winId, int x, int y, int width, int height, int dx
 
 void QHtmlService::onServerNewConnection()
 {
-    while (mServer.hasPendingConnections()) {
-        QTcpSocket * const socket = mServer.nextPendingConnection();
-        //if (mDebug)
-        //     qDebug() << "mServer.nextPendingConnection";
+    while (mpServer->hasPendingConnections()) {
+        QTcpSocket * const socket = mpServer->nextPendingConnection();
+
+        socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+        socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
         connect(socket, SIGNAL(readyRead()), SLOT(onHttpSocketReadyRead()));
         connect(socket, SIGNAL(disconnected()), SLOT(onSocketDisconnected()));
     }
@@ -134,18 +208,20 @@ void QHtmlService::onHttpSocketReadyRead()
     QTcpSocket * const socket = qobject_cast<QTcpSocket*>(sender());
     Q_ASSERT(socket);
 
-    //QMutexLocker lock(&mWebSocketHandshakeHeadersMutex);
-
     // If we are waiting for full websocket handshake header
     QHash<QTcpSocket *, QStringList>::iterator header = mWebSocketHandshakeHeaders.find(socket);
-    if (header != mWebSocketHandshakeHeaders.end()) {
-        while (socket->canReadLine()) {
+    if (header != mWebSocketHandshakeHeaders.end())
+    {
+        while (socket->canReadLine())
+        {
             const QString line = QString::fromLatin1(socket->readLine().constData());
-            if (line == QStringLiteral("\r\n")) {
+            if (line == QStringLiteral("\r\n"))
+            {
                 disconnect(socket, SIGNAL(readyRead()), this, SLOT(onHttpSocketReadyRead()));
                 sendWebSocketHandshake(socket);
                 return;
-            } else {
+            } else
+            {
                 header->append(line);
             }
         }
@@ -180,19 +256,21 @@ void QHtmlService::onHttpSocketReadyRead()
     }
 }
 
-void QHtmlService::onWebSocketReadyRead()
+void QHtmlService::webSocketReadyRead(QTcpSocket *socket)
 {
-    QTcpSocket * const socket = qobject_cast<QTcpSocket *>(sender());
     QByteArray arr;
     {
-    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
-    QHash<QTcpSocket *, QByteArray>::Iterator iter = mWebSocketFrameBuffers.find(socket);
-    if (iter == mWebSocketFrameBuffers.end())
-        return;
+        QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+        QHash<QTcpSocket *, QByteArray>::Iterator iter = mWebSocketFrameBuffers.find(socket);
+        if (iter == mWebSocketFrameBuffers.end())
+        {
+            return;
+        }
 
-    arr = iter.value();
-    arr += socket->readAll();
+        arr = iter.value();
+        arr += socket->readAll();
     }
+
     while (arr.size() >= 2)
     {
         bool fin = static_cast<quint8>(arr.constData()[0]) & 0x80;
@@ -244,19 +322,34 @@ void QHtmlService::onWebSocketReadyRead()
 void QHtmlService::onSocketDisconnected()
 {
     QTcpSocket * const socket = qobject_cast<QTcpSocket *>(sender());
-    if (mDebug)
-         qDebug() << "QHtmlService::onSocketDisconnected";
+    mWebSocketHandshakeHeaders.remove(socket);
 
     {
-    //QMutexLocker lock(&mWebSocketHandshakeHeadersMutex);
-    mWebSocketHandshakeHeaders.remove(socket);
-    }
-    {
         QMutexLocker lock(&mWebSocketFrameBuffersMutex);
-        qDebug() <<  "WebSocketFrameBuffers size - " << mWebSocketFrameBuffers.size();
-        if (mWebSocketFrameBuffers.size() != 0)    mWebSocketFrameBuffers.remove(socket);
+        if (mWebSocketFrameBuffers.size() != 0)
+        {
+            mWebSocketFrameBuffers.remove(socket);
+        }
     }
     socket->deleteLater();
+}
+
+void QHtmlService::onSocketActivated(int socket_fd)
+{
+    QTcpSocket *ptr = NULL;
+    {
+        QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+        for ( QHash<QTcpSocket *, QByteArray>::ConstIterator iter = mWebSocketFrameBuffers.constBegin(); iter != mWebSocketFrameBuffers.constEnd(); ++iter)
+        {
+            if (iter.key()->socketDescriptor() == socket_fd && iter.key()->bytesAvailable())
+            {
+                ptr = iter.key();
+                break;
+            }
+        }
+    }
+
+    if (ptr) webSocketReadyRead(ptr);
 }
 
 QString QHtmlService::translateHttpStatusCode(int statusCode)
@@ -319,7 +412,7 @@ void QHtmlService::sendStaticResponse(QTcpSocket *socket, int statusCode, QStrin
     if (data.isEmpty()) {
         mimeType = guessMimeType(QStringLiteral("html"));
         data = QString::fromLatin1("<html><head><title>%1 %2</title></header><body>%2</body></html>")
-                                   .arg(statusCode).arg(translateHttpStatusCode(statusCode)).toLatin1();
+                .arg(statusCode).arg(translateHttpStatusCode(statusCode)).toLatin1();
     }
     responseHeader += QString::fromLatin1("Content-Type: %1\r\nContent-Length: %2\r\n").arg(mimeType).arg(data.size());
     responseHeader += QStringLiteral("\r\n");
@@ -378,27 +471,31 @@ void QHtmlService::sendWebSocketHandshake(QTcpSocket *socket)
     const QByteArray hash = QCryptographicHash::hash(key.toLatin1(), QCryptographicHash::Sha1);
     const QString accept = QString::fromLatin1(hash.toBase64().constData());
     const QString responseHeader = QString::fromLatin1("HTTP/1.1 101 Switching Protocols\r\n"
-                                                 "Upgrade: websocket\r\n"
-                                                 "Connection: Upgrade\r\n"
-                                                 "Sec-WebSocket-Accept: %1\r\n"
-                                                 "Sec-WebSocket-Protocol: qthtml\r\n"
-                                                 "\r\n").arg(accept);
+                                                       "Upgrade: websocket\r\n"
+                                                       "Connection: Upgrade\r\n"
+                                                       "Sec-WebSocket-Accept: %1\r\n"
+                                                       "Sec-WebSocket-Protocol: qthtml\r\n"
+                                                       "\r\n").arg(accept);
     socket->write(responseHeader.toLatin1());
-    connect(socket, SIGNAL(readyRead()), SLOT(onWebSocketReadyRead()));
+    QSocketNotifier *pNotif = new QSocketNotifier(socket->socketDescriptor(), QSocketNotifier::Read, socket);
+    connect(pNotif, SIGNAL(activated(int)), SLOT(onSocketActivated(int)));
 
     if (mDebug)
-         qDebug() << "QHtmlService::sendWebSocketHandshake";
+        qDebug() << "QHtmlService::sendWebSocketHandshake";
 
     {
-    QMutexLocker lock(&mWebSocketFrameBuffersMutex);
-    mWebSocketFrameBuffers.insert(socket, QByteArray());
+        QMutexLocker lock(&mWebSocketFrameBuffersMutex);
+        mWebSocketFrameBuffers.insert(socket, QByteArray());
     }
 
     {
-    QMutexLocker lock(&mWinIdsMutex);
-    // initialize commands
-    foreach (int winId, mWinIds)
-        sendMessage(socket, QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), winId);
+        QMutexLocker lock(&mWinIdsMutex);
+        // initialize commands
+        for (auto i = mWinIds.begin(); i != mWinIds.end(); i++)
+        {
+            if ((*i).st == showed)
+                sendMessage(socket, QString(QChar::fromLatin1(static_cast<char>(MessageCommand::CreateWindow))), (*i).windId);
+        }
     }
     emit flush();
 }
@@ -568,8 +665,6 @@ void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message, T1 t1
 }
 
 
-
-
 void QHtmlService::sendMessage(QTcpSocket *socket, const QString &message) const
 {
     const QByteArray payload = message.toLatin1();
@@ -592,49 +687,82 @@ void QHtmlService::processMessage(const QString &message) const
     switch (command) {
     case MessageCommand::SetScreenGeometry:
         mScreenGeometry = QRect(args[1].toInt(), args[2].toInt(),
-                                args[3].toInt(), args[4].toInt());
+                args[3].toInt(), args[4].toInt());
         emit setScreenGeometry(mScreenGeometry.x(), mScreenGeometry.y(),
                                mScreenGeometry.width(), mScreenGeometry.height());
         break;
     case MessageCommand::DestroyWindow:
-        emit destroy(args[1].toInt());
+        emit destroy(args[1].toInt(), fromWinIdToInstanceId(args[1].toInt()));
         break;
     case MessageCommand::WindowActivated:
-        emit activated(args[1].toInt());
+        emit activated(args[1].toInt(), fromWinIdToInstanceId(args[1].toInt()));
         break;
     case MessageCommand::SetGeometry:
         emit setWindowGeometry(args[1].toInt(),
-                               args[2].toInt(), args[3].toInt(),
-                               args[4].toInt(), args[5].toInt());
+                args[2].toInt(), args[3].toInt(),
+                args[4].toInt(), args[5].toInt(),
+                fromWinIdToInstanceId(args[1].toInt()));
         break;
     case MessageCommand::KeyDown:
         emit keyEvent(args[1].toInt(), QEvent::KeyPress,
-                      args[2].toInt(), args[3].toInt(),
-                      args[4].toInt() ? QString(args[2].toInt()) : QStringLiteral(""));
+                args[2].toInt(), args[3].toInt(),
+                args[4].toInt() ? QString(args[2].toInt()) : QStringLiteral(""),
+            fromWinIdToInstanceId(args[1].toInt()));
         break;
     case MessageCommand::KeyUp:
         emit keyEvent(args[1].toInt(), QEvent::KeyRelease,
-                      args[2].toInt(), args[3].toInt(),
-                      args[4].toInt() ? QString(args[2].toInt()) : QStringLiteral(""));
+                args[2].toInt(), args[3].toInt(),
+                args[4].toInt() ? QString(args[2].toInt()) : QStringLiteral(""),
+            fromWinIdToInstanceId(args[1].toInt()));
         break;
     case MessageCommand::MouseMove:
     case MessageCommand::MouseDown:
     case MessageCommand::MouseUp:
         emit mouseEvent(args[1].toInt(),
-                        args[2].toInt(), args[3].toInt(),
-                        args[4].toInt(), args[5].toInt(),
-                        args[6].toInt(), args[7].toInt());
+                args[2].toInt(), args[3].toInt(),
+                args[4].toInt(), args[5].toInt(),
+                args[6].toInt(), args[7].toInt(),
+                fromWinIdToInstanceId(args[1].toInt()));
         break;
     case MessageCommand::MouseWheel:
         emit mouseWheel(args[1].toInt(),
-                        args[2].toInt(), args[3].toInt(),
-                        args[4].toInt(), args[5].toInt(),
-                        args[6].toInt(), args[7].toInt());
+                args[2].toInt(), args[3].toInt(),
+                args[4].toInt(), args[5].toInt(),
+                args[6].toInt(), args[7].toInt(),
+                fromWinIdToInstanceId(args[1].toInt()));
         break;
+    case MessageCommand::WSDebug:
+    {
+        qWarning() << QString::fromLatin1("WSDebug: '%1'").arg(message);
+        break;
+    }
     default:
         qWarning() << QString::fromLatin1("Unhandled Message '%1'").arg(message);
         break;
     }
+}
+
+bool QHtmlService::isAllowedWinId(int win_id, int instance_id) const
+{
+    QMutexLocker lock(&mWinIdsMutex);
+    for (auto i = mWinIds.begin(); i != mWinIds.end(); i++)
+    {
+        if ((*i).instance_id == instance_id && (*i).windId == win_id)
+            return (*i).st == showed;
+    }
+
+    return false;
+}
+
+int QHtmlService::fromWinIdToInstanceId(int winId) const
+{
+    QMutexLocker lock(&mWinIdsMutex);
+    for (int i = mWinIds.size()-1; i >= 0; --i)
+    {
+        if (mWinIds[i].windId == winId)
+            return mWinIds[i].instance_id;
+    }
+    return -1;
 }
 
 QT_END_NAMESPACE

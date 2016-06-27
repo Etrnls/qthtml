@@ -24,17 +24,21 @@
 #ifndef QHTMLSERVICE_H
 #define QHTMLSERVICE_H
 
+#include <QtCore/QObject>
 #include <QtCore/QHash>
+#include <QtCore/QVector>
 #include <QtCore/QRect>
+#include <QtCore/QMutex>
 #include <QtCore/QStringList>
-#include <QtNetwork/QTcpServer>
-#include <QtCore/QMutexLocker>
 
 QT_BEGIN_NAMESPACE
 
+class QTcpServer;
+class QTcpSocket;
+
 class QHtmlService : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
     QHtmlService();
     ~QHtmlService();
@@ -47,12 +51,13 @@ public:
     Q_INVOKABLE void changeCursor(int shape) const;
 
     // PlatformWindow Services
-    Q_INVOKABLE int allocateWinId(int windowType);
-    Q_INVOKABLE void deallocateWinId(int winId);
-    Q_INVOKABLE void setGeometry(int winId, int x, int y, int width, int height) const;
-    Q_INVOKABLE void setVisible(int winId, bool visible) const;
-    Q_INVOKABLE void setWindowTitle(int winId, const QString &title) const;
-    Q_INVOKABLE void raise(int winId) const;
+    Q_INVOKABLE int generateWinId(int instance_id);
+    Q_INVOKABLE bool drawJSWindow(int winId, int windowType);
+    Q_INVOKABLE void deallocateWinId(int winId, int instance_id);
+    Q_INVOKABLE void setGeometry(int winId, int x, int y, int width, int height, int instance_id) const;
+    Q_INVOKABLE void setVisible(int winId, bool visible, int instance_id) const;
+    Q_INVOKABLE void setWindowTitle(int winId, const QString &title, int instance_id) const;
+    Q_INVOKABLE void raise(int winId, int instance_id) const;
 
     // PlatformBackingStore Services
     Q_INVOKABLE void flush(int winId, int x, int y, int width, int height, const QByteArray &imageData) const;
@@ -62,21 +67,23 @@ signals:
     void setScreenGeometry(int x, int y, int width, int height) const;
 
     // PlatformWindow Services
-    void destroy(int winId) const;
-    void activated(int winId) const;
-    void setWindowGeometry(int winId, int x, int y, int width, int height) const;
-    void keyEvent(int winId, int type, int code, int modifiers, const QString &text) const;
-    void mouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers) const;
-    void mouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers) const;
+    void destroy(int winId, int instance_id) const;
+    void activated(int winId, int instance_id) const;
+    void setWindowGeometry(int winId, int x, int y, int width, int height, int instance_id) const;
+    void keyEvent(int winId, int type, int code, int modifiers, const QString &text, int instance_id) const;
+    void mouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers, int instance_id) const;
+    void mouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers, int instance_id) const;
 
     // PlatformBackingStore Services
     void flush() const;
 private slots:
     void onServerNewConnection();
     void onHttpSocketReadyRead();
-    void onWebSocketReadyRead();
     void onSocketDisconnected();
+    void onSocketActivated(int socket_fd);
+
 private:
+    void webSocketReadyRead(QTcpSocket *socket);
     enum WebSocketOpcode {
         WS_CONTINUATION = 0,
         WS_TEXT = 1,
@@ -103,7 +110,8 @@ private:
         MouseMove = '~',            // winId, localX, localY, globalX, globalY, buttons, modifiers
         MouseDown = 'm',            // winId, localX, localY, globalX, globalY, buttons, modifiers
         MouseUp = 'M',              // winId, localX, localY, globalX, globalY, buttons, modifiers
-        MouseWheel = 'w'            // winId, localX, localY, globalX, globalY, delta, modifiers
+        MouseWheel = 'w',           // winId, localX, localY, globalX, globalY, delta, modifiers
+        WSDebug = 'D'               // just for websocket debugging
     };
 
     // Helper Functions
@@ -151,17 +159,34 @@ private:
     void sendMessage(QTcpSocket *socket,const QString &message, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) const;
 
     void processMessage(const QString &message) const;
+    bool isAllowedWinId(int win_id, int instance_id) const;
+    int fromWinIdToInstanceId(int winId) const;
 
-    QTcpServer mServer;
+    QTcpServer *mpServer;
     QHash<QTcpSocket *, QStringList> mWebSocketHandshakeHeaders;
     QHash<QTcpSocket *, QByteArray> mWebSocketFrameBuffers;
 
     mutable QRect mScreenGeometry;
-    QSet<int> mWinIds;
+
+    typedef enum
+    {
+        not_showed = 0,
+        showed,
+        awaiting_removal
+    } tWinState;
+
+    //QHtmlWindow instance id ,win id, win state
+    typedef struct
+    {
+        int instance_id;    //QHtmlWindow instance id
+        int windId;         //win id
+        tWinState st;       //win state
+    } tWinIdStruct;
+    QVector<tWinIdStruct>  mWinIds;
+    mutable QMutex      mWinIdsMutex;
 
     //QMutex mWebSocketHandshakeHeadersMutex;
     mutable QMutex mWebSocketFrameBuffersMutex;
-    QMutex mWinIdsMutex;
 
     bool mDebug;
 };
