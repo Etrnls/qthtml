@@ -47,20 +47,20 @@ QHtmlWindow::QHtmlWindow(QWindow *window, QObject *htmlService)
                               , Q_ARG(int, mInstanceId));
 
     connect(mHtmlService, SIGNAL(destroy(int, int)),
-                          SLOT(onDestroy(int, int)));
+                          SLOT(onDestroy(int, int)), Qt::QueuedConnection);
     connect(mHtmlService, SIGNAL(activated(int, int)),
-                          SLOT(onActivated(int, int)));
+                          SLOT(onActivated(int, int)), Qt::QueuedConnection);
     connect(mHtmlService, SIGNAL(setWindowGeometry(int, int, int, int, int, int)),
-                          SLOT(onSetGeometry(int, int, int, int, int, int)));
+                          SLOT(onSetGeometry(int, int, int, int, int, int)), Qt::QueuedConnection);
 
     connect(mHtmlService, SIGNAL(keyEvent(int, int, int, int, QString, int)),
-                          SLOT(onKeyEvent(int, int, int, int, QString, int)));
+                          SLOT(onKeyEvent(int, int, int, int, QString, int)), Qt::QueuedConnection);
     connect(mHtmlService, SIGNAL(mouseEvent(int, int, int, int, int, int, int, int)),
-                          SLOT(onMouseEvent(int, int, int, int, int, int, int, int)));
+                          SLOT(onMouseEvent(int, int, int, int, int, int, int, int)), Qt::QueuedConnection);
     connect(mHtmlService, SIGNAL(mouseWheel(int, int, int, int, int, int, int, int)),
-                          SLOT(onMouseWheel(int, int, int, int, int, int, int, int)));
+                          SLOT(onMouseWheel(int, int, int, int, int, int, int, int)), Qt::QueuedConnection);
 
-    connect(mHtmlService, SIGNAL(flush()), SLOT(onFlush()));
+    connect(mHtmlService, SIGNAL(flush()), SLOT(onFlush()), Qt::QueuedConnection);
 
     const QRect rect = window->geometry();
     QMetaObject::invokeMethod(mHtmlService, "setGeometry",

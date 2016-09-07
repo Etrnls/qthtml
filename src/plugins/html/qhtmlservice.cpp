@@ -55,7 +55,7 @@ QHtmlService::QHtmlService()
 QHtmlService::~QHtmlService()
 {
     qDebug()<<__FUNCTION__;
-    disconnect(this);   //disconnect from all signals
+    disconnect();   //disconnect from all signals
 
     mpServer->close();
 

@@ -1,1 +1,6 @@
 *.pro.user
+/.moc/
+/.obj/
+/.pch/
+/.rcc/
+/Makefile.html_embed
