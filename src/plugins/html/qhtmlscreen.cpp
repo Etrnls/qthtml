@@ -21,6 +21,7 @@
 **
 ****************************************************************************/
 
+#include <QtGlobal>
 #include "qhtmlscreen.h"
 #include "qhtmlcursor.h"
 
@@ -33,8 +34,8 @@ QHtmlScreen::QHtmlScreen(QObject *htmlService)
     : mHtmlService(htmlService)
 {
     mDebug = true;
-	if (mDebug)
-    	qDebug() << "QHtmlScreen";
+    if (mDebug)
+        qDebug() << "QHtmlScreen";
 
     mCursor.reset(new QHtmlCursor(this, mHtmlService));
     connect(mHtmlService, SIGNAL(setScreenGeometry(int, int, int, int)), SLOT(setGeometry(int, int, int, int)));
@@ -69,11 +70,16 @@ QImage::Format QHtmlScreen::format() const
 
 void QHtmlScreen::setGeometry(int x, int y, int width, int height)
 {
-	if (mDebug)
-    	qDebug() << "QHtmlScreen::setGeometry";
+    if (mDebug)
+        qDebug() << "QHtmlScreen::setGeometry";
 
     mGeometry = QRect(x, y, width, height);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+    QWindowSystemInterface::handleScreenGeometryChange(screen(), mGeometry, mGeometry);
+#else
     QWindowSystemInterface::handleScreenGeometryChange(screen(), mGeometry);
+#endif
+
 }
 
 QT_END_NAMESPACE

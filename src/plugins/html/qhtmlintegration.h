@@ -34,13 +34,16 @@ class QHtmlIntegration : public QPlatformIntegration
 {
 public:
     QHtmlIntegration();
+    ~QHtmlIntegration();
 
     QPlatformWindow *createPlatformWindow(QWindow *window) const;
     QPlatformBackingStore *createPlatformBackingStore(QWindow *window) const;
 
-    QAbstractEventDispatcher *guiThreadEventDispatcher() const;
-
     QPlatformFontDatabase *fontDatabase() const;
+
+    // Event dispatcher:
+    virtual QAbstractEventDispatcher *createEventDispatcher() const;
+
 private:
     QAbstractEventDispatcher *mEventDispatcher;
 

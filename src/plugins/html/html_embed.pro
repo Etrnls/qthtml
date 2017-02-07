@@ -1,14 +1,13 @@
-#TARGET = qhtml
-#load(qt_plugin)
-
 TARGET = qhtml
+#DEFINES += QT_FONTS_ARE_RESOURCES
 
 PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = QHtmlIntegrationPlugin
 load(qt_plugin)
 
 
-QT += serviceframework core-private gui-private platformsupport-private network
+QT += core-private gui-private platformsupport-private network
+CONFIG += qpa/genericunixfontdatabase   #fonts support
 
 #DEFINES += \
 #           QT_NO_CAST_FROM_BYTEARRAY \
@@ -21,7 +20,7 @@ HEADERS = \
           qhtmlcursor.h \
           qhtmlwindow.h \
           qhtmlbackingstore.h \
-    ../../../services/html/qhtmlservice.h
+          qhtmlservice.h
 
 
 SOURCES = \
@@ -31,16 +30,19 @@ SOURCES = \
           qhtmlcursor.cpp \
           qhtmlwindow.cpp \
           qhtmlbackingstore.cpp \
-    ../../../services/html/qhtmlservice.cpp
+          qhtmlservice.cpp
 
 
-DESTDIR = $$QT.gui.plugins/platforms
-target.path += $$[QT_INSTALL_PLUGINS]/platforms
-INSTALLS += target
+#DESTDIR = $$QT.gui.plugins/platforms
+#target.path += $$[QT_INSTALL_PLUGINS]/platforms
+#INSTALLS += target
 
 OTHER_FILES += \
-    ../../../services/html/client.js \
-    ../../../services/html/client.html
+    client.js \
+    client.html \
+    jquery.min.js \
+    jquery-ui.min.js \
+    jquery-ui.css
 
 RESOURCES += \
-    ../../../services/html/html.qrc
+    html.qrc

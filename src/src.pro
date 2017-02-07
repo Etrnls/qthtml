@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
 
-SUBDIRS += plugins services
+SUBDIRS += plugins

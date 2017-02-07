@@ -1,7 +1,0 @@
-<!DOCTYPE RCC>
-<RCC version="1.0">
-<qresource>
-        <file>client.html</file>
-        <file>client.js</file>
-</qresource>
-</RCC>

@@ -6,3 +6,4 @@ qrc_*.cpp
 *.cpp.swp
 *.js.swp
 src/services/html/htmlservice
+*.pro.user

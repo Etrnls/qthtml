@@ -21,47 +21,38 @@
 **
 ****************************************************************************/
 
-#ifndef QHTMLWINDOW_H
-#define QHTMLWINDOW_H
+#include "qhtmlintegration.h"
 
-#include <qpa/QPlatformWindow.h>
+#include <qpa/qplatformintegrationplugin.h>
+#include <QtCore/QtDebug>
 
 QT_BEGIN_NAMESPACE
 
-class QHtmlWindow : public QObject, public QPlatformWindow
+class QHtmlIntegrationPlugin : public QPlatformIntegrationPlugin
 {
     Q_OBJECT
+    Q_PLUGIN_METADATA(IID QPlatformIntegrationFactoryInterface_iid FILE "html.json")
 public:
-    QHtmlWindow(QWindow *window, QObject *htmlService);
-    ~QHtmlWindow();
-
-    void setGeometry(const QRect &rect);
-
-    QMargins frameMargins() const;
-
-    void setVisible(bool visible);
-
-    WId winId() const;
-
-    void setWindowTitle(const QString &title);
-    void raise();
-public slots:
-    void onFlush();
-public slots:
-    void onDestroy(int winId);
-    void onActivated(int winId);
-    void onSetGeometry(int winId, int x, int y, int width, int height);
-    void onKeyEvent(int winId, int type, int code, int modifiers, const QString &text);
-    void onMouseEvent(int winId, int localX, int localY, int globalX, int globalY, int buttons, int modifiers);
-    void onMouseWheel(int winId, int localX, int localY, int globalX, int globalY, int delta, int modifiers);
-private:
-    QObject *mHtmlService;
-    bool mDebug;
-    bool mDebugEvents;
-
-    int mWinId;
+    QStringList keys() const;
+    QPlatformIntegration *create(const QString&, const QStringList&);
 };
+
+QStringList QHtmlIntegrationPlugin::keys() const
+{
+    QStringList list;
+    list << QStringLiteral("html");
+    return list;
+}
+
+QPlatformIntegration *QHtmlIntegrationPlugin::create(const QString& system, const QStringList& paramList)
+{
+    Q_UNUSED(paramList);
+    if (system.toLower() == QStringLiteral("html"))
+        return new QHtmlIntegration();
+
+    return 0;
+}
 
 QT_END_NAMESPACE
 
-#endif
+#include "main.moc"

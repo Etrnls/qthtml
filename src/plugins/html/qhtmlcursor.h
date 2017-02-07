@@ -21,38 +21,26 @@
 **
 ****************************************************************************/
 
-#include "qhtmlintegration.h"
+#ifndef QHTMLCURSOR_H
+#define QHTMLCURSOR_h
 
-#include <qpa/QPlatformIntegrationPlugin.h>
-#include <QtCore/QtDebug>
+#include <qpa/qplatformcursor.h>
 
 QT_BEGIN_NAMESPACE
 
-class QHtmlIntegrationPlugin : public QPlatformIntegrationPlugin
+class QHtmlScreen;
+
+class QHtmlCursor : public QPlatformCursor
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.1" FILE "html.json")
 public:
-    QStringList keys() const;
-    QPlatformIntegration *create(const QString&, const QStringList&);
+    QHtmlCursor(QHtmlScreen *screen, QObject *htmlService);
+    
+    void changeCursor(QCursor *windowCursor, QWindow *window);
+private:
+    QObject *mHtmlService;
 };
-
-QStringList QHtmlIntegrationPlugin::keys() const
-{
-    QStringList list;
-    list << QStringLiteral("html");
-    return list;
-}
-
-QPlatformIntegration *QHtmlIntegrationPlugin::create(const QString& system, const QStringList& paramList)
-{
-    Q_UNUSED(paramList);
-    if (system.toLower() == QStringLiteral("html"))
-        return new QHtmlIntegration();
-
-    return 0;
-}
 
 QT_END_NAMESPACE
 
-#include "main.moc"
+#endif
