@@ -30,11 +30,20 @@
 #include <QtCore/QThread>
 #include <QtCore/QCoreApplication>
 #include <QtGui/private/qguiapplication_p.h>
+#if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
 #include <QtPlatformSupport/private/qgenericunixfontdatabase_p.h>
 #ifndef Q_OS_WIN
 #include <QtPlatformSupport/private/qgenericunixeventdispatcher_p.h>
 #else
 #include <QtCore/private/qeventdispatcher_win_p.h>
+#endif
+#else
+#include <QtFontDatabaseSupport/private/qgenericunixfontdatabase_p.h>
+#ifndef Q_OS_WIN
+#include <QtEventDispatcherSupport/private/qgenericunixeventdispatcher_p.h>
+#else
+#include <QtCore/private/qeventdispatcher_win_p.h>
+#endif
 #endif
 
 #include "qhtmlservice.h"

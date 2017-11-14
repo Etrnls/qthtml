@@ -35,16 +35,16 @@ public:
     QHtmlWindow(QWindow *window, QObject *htmlService);
     ~QHtmlWindow();
 
-    void setGeometry(const QRect &rect);
+    void setGeometry(const QRect &rect) Q_DECL_OVERRIDE;
 
-    QMargins frameMargins() const;
+    QMargins frameMargins() const Q_DECL_OVERRIDE;
 
-    void setVisible(bool visible);
+    void setVisible(bool visible) Q_DECL_OVERRIDE;
 
-    WId winId() const;
+    WId winId() const Q_DECL_OVERRIDE;
 
-    void setWindowTitle(const QString &title);
-    void raise();
+    void setWindowTitle(const QString &title) Q_DECL_OVERRIDE;
+    void raise() Q_DECL_OVERRIDE;
 
     bool setKeyboardGrabEnabled(bool) Q_DECL_OVERRIDE { return false; }
     void propagateSizeHints() Q_DECL_OVERRIDE { }
