@@ -5,8 +5,18 @@ PLUGIN_TYPE = platforms
 PLUGIN_CLASS_NAME = QHtmlIntegrationPlugin
 load(qt_plugin)
 
+QT += core-private gui-private network
 
-QT += core-private gui-private platformsupport-private network
+lessThan(QT_MAJOR_VERSION, 5) {
+    QT += platformsupport-private
+} else {
+    equals(QT_MAJOR_VERSION, 5): lessThan(QT_MINOR_VERSION, 8): {
+        QT += platformsupport-private
+    } else {
+        QT += fontdatabase_support_private eventdispatcher_support_private
+    }
+}
+
 CONFIG += qpa/genericunixfontdatabase   #fonts support
 
 #DEFINES += \
