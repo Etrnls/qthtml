@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
 
-SUBDIRS += platforms
+SUBDIRS += html/html_embed.pro
